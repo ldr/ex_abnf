@@ -45,7 +45,7 @@ defmodule ABNF do
           data = File.read!(file)
           to_charlist(data)
         true ->
-          raise ArgumentError, "Missing use option :file"
+          raise ArgumentError, "Missing use option :grammar_file"
       end
       {grammar, funs} = case Grammar.rulelist input, module: __MODULE__, create_module: false do
         {grammar, '', funs} -> {grammar, funs}
