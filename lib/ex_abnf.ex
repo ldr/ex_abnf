@@ -22,6 +22,53 @@ defmodule ABNF do
   alias ABNF.Interpreter, as: Interpreter
   alias ABNF.CaptureResult, as: CaptureResult
   require Logger
+
+  @doc """
+  Optional __using__ macro for putting ABNF grammar etc in the module calling us:
+
+  * a simple parse("rulename", 'code', %State{}) function calling ABNF.apply passing ourselve as grammar
+  * rule("rulename") returning the ABNF AST for that specific rule
+  * all inline Elixir functions
+
+    ## Example:
+
+      iex> defmodule Basic do use ABNF, grammar_file: "test/resources/basic.abnf" end
+      iex> Basic.parse "string1", 'test'
+      %ABNF.CaptureResult{input: 'test', rest: [], state: %{}, string_text: 'test',
+       string_tokens: ['test'],
+        values: [[[[['t']]], [[['e']]], [[['s']]], [[['t']]]]]}
+  """
+  defmacro __using__(opts) do
+    quote do
+      input = cond do
+        (file = unquote(opts[:grammar_file])) ->
+          data = File.read!(file)
+          to_charlist(data)
+        true ->
+          raise ArgumentError, "Missing use option :file"
+      end
+      {grammar, funs} = case Grammar.rulelist input, module: __MODULE__, create_module: false do
+        {grammar, '', funs} -> {grammar, funs}
+        {_grammar, rest, _funs} -> throw {:incomplete_parsing, rest}
+        _ -> throw {:invalid_grammar, input}
+      end
+      # add parse, grammar rule("name") and -inline Elixir functions to ourself
+      def parse(rule, input, state \\ %{}), do:
+        ABNF.apply(__MODULE__, rule, input, state)
+      Enum.each grammar, fn({name, rule}) ->
+        ABNF.defrule(name, Macro.escape(rule))
+      end
+      Code.eval_quoted funs, [], __ENV__
+    end
+  end
+
+  @doc false
+  defmacro defrule(name, value) do
+    quote bind_quoted: [name: name, value: value] do
+      def rule(unquote(name)), do: unquote(value)
+    end
+  end
+
   @doc """
   Loads a set of abnf rules from a file.
   """
@@ -37,8 +84,8 @@ defmodule ABNF do
   @spec load([byte]) :: Grammar.t | no_return
   def load(input) do
     case Grammar.rulelist input do
-      {rules, ''} -> rules
-      {_rlist, rest} -> throw {:incomplete_parsing, rest}
+      {rules, '', _funs} -> rules
+      {_rlist, rest, _funs} -> throw {:incomplete_parsing, rest}
       _ -> throw {:invalid_grammar, input}
     end
   end

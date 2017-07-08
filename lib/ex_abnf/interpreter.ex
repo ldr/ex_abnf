@@ -27,7 +27,7 @@ defmodule ABNF.Interpreter do
   Parses the given input using the given grammar.
   """
   @spec apply(
-    Grammar.t, String.t, char_list, term
+    Atom.t | Grammar.t, String.t, char_list, term
   ) :: CaptureResult.t | no_return
   def apply(grammar, rule_str, input, state \\ nil) do
     rule_str = Util.rulename rule_str
@@ -157,6 +157,16 @@ defmodule ABNF.Interpreter do
         state,
         rest
       }
+    end
+  end
+
+  defp parse_real(grammar, %{element: :rulename, value: e}, input, state) when is_atom(grammar) do
+    try do
+      value = Kernel.apply grammar, :rule, [e]
+      parse_real grammar, value, input, state
+    rescue
+      FunctionClauseError ->
+        raise ArgumentError, "Rule #{e} not found in #{inspect grammar}"
     end
   end
 

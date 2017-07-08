@@ -27,22 +27,22 @@ defmodule ABNF.Grammar do
   Builds a Grammar.t from the given input (an ABNF text grammar). You should
   never use this one directly but use the ones in the ABNF module instead.
   """
-  @spec rulelist(char_list) :: t
-  def rulelist(input) do
+  @spec rulelist(char_list, Keyword.t) :: {t, list, tuple}
+  def rulelist(input, opts \\ []) do
     {module_code, rest} = case code input do
       nil -> {"", input}
       {c, rest} -> {to_string(c), rest}
     end
-    rulelist_tail module_code, rest
+    rulelist_tail module_code, rest, %{}, nil, opts
   end
 
-  defp rulelist_tail(module_code, input, acc \\ %{}, last \\ nil) do
+  defp rulelist_tail(module_code, input, acc \\ %{}, last \\ nil, opts \\ []) do
     case rule input do
       nil ->
         rest = zero_or_more_wsp input
         case c_nl rest do
           nil ->
-            module_name = String.to_atom(
+            module_name = opts[:module] || String.to_atom(
               "A#{Base.encode16 :crypto.hash(
                 :md5, :erlang.term_to_binary(make_ref())
               )}"
@@ -74,17 +74,21 @@ defmodule ABNF.Grammar do
                 str
               end
             end
-            funs = Code.string_to_quoted(funs)
-            Module.create module_name, funs, Macro.Env.location(__ENV__)
-            {acc, input}
+            {:ok, funs} = Code.string_to_quoted(funs)
+
+            if Keyword.get opts, :create_module, false do
+              Module.create module_name, {:ok, funs}, Macro.Env.location(__ENV__)
+            end
+
+            {acc, input, funs}
           {comments, rest} -> case last do
-            nil -> rulelist_tail module_code, rest, acc
+            nil -> rulelist_tail module_code, rest, acc, nil, opts
             last ->
               last = add_comments last, comments
-              rulelist_tail module_code, rest, Map.put(acc, last.name, last)
+              rulelist_tail module_code, rest, Map.put(acc, last.name, last), nil, opts
           end
         end
-      {r, rest} -> rulelist_tail module_code, rest, Map.put(acc, r.name, r)
+      {r, rest} -> rulelist_tail module_code, rest, Map.put(acc, r.name, r), nil, opts
     end
   end
 
