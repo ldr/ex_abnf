@@ -27,7 +27,7 @@ defmodule ABNF.Grammar do
   Builds a Grammar.t from the given input (an ABNF text grammar). You should
   never use this one directly but use the ones in the ABNF module instead.
   """
-  @spec rulelist(char_list, Keyword.t) :: {t, list, tuple}
+  @spec rulelist(char_list, Keyword.t) :: {t, list} | {t, list, tuple}
   def rulelist(input, opts \\ []) do
     {module_code, rest} = case code input do
       nil -> {"", input}
@@ -42,7 +42,7 @@ defmodule ABNF.Grammar do
         rest = zero_or_more_wsp input
         case c_nl rest do
           nil ->
-            module_name = opts[:module] || String.to_atom(
+            module_name = Keyword.get opts, :target_module, String.to_atom(
               "A#{Base.encode16 :crypto.hash(
                 :md5, :erlang.term_to_binary(make_ref())
               )}"
@@ -76,11 +76,14 @@ defmodule ABNF.Grammar do
             end
             {:ok, funs} = Code.string_to_quoted(funs)
 
-            if Keyword.get opts, :create_module, false do
+            if Keyword.get opts, :target_module do
+              # return the grammar, what's left of input AND the funs reperesenting the inline elixir code
+              {acc, input, funs}
+            else
+              # create dynamic module and return the 2-tuple and be backwards compatible
               Module.create module_name, {:ok, funs}, Macro.Env.location(__ENV__)
+              {acc, input}
             end
-
-            {acc, input, funs}
           {comments, rest} -> case last do
             nil -> rulelist_tail module_code, rest, acc, nil, opts
             last ->

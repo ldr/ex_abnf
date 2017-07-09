@@ -84,8 +84,8 @@ defmodule ABNF do
   @spec load([byte]) :: Grammar.t | no_return
   def load(input) do
     case Grammar.rulelist input do
-      {rules, '', _funs} -> rules
-      {_rlist, rest, _funs} -> throw {:incomplete_parsing, rest}
+      {rules, ''} -> rules
+      {_rlist, rest} -> throw {:incomplete_parsing, rest}
       _ -> throw {:invalid_grammar, input}
     end
   end
