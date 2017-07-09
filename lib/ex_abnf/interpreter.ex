@@ -162,7 +162,7 @@ defmodule ABNF.Interpreter do
 
   defp parse_real(grammar, %{element: :rulename, value: e}, input, state) when is_atom(grammar) do
     try do
-      value = Kernel.apply grammar, :rule, [e]
+      value = Kernel.apply grammar, :abnf_rule, [e]
       parse_real grammar, value, input, state
     rescue
       FunctionClauseError ->

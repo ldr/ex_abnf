@@ -53,7 +53,7 @@ defmodule ABNF do
         _ -> throw {:invalid_grammar, input}
       end
       # add parse, grammar rule("name") and -inline Elixir functions to ourself
-      def parse(rule, input, state \\ %{}), do:
+      def abnf_parse!(rule, input, state \\ %{}), do:
         ABNF.apply(__MODULE__, rule, input, state)
       Enum.each grammar, fn({name, rule}) ->
         ABNF.defrule(name, Macro.escape(rule))
@@ -65,7 +65,7 @@ defmodule ABNF do
   @doc false
   defmacro defrule(name, value) do
     quote bind_quoted: [name: name, value: value] do
-      def rule(unquote(name)), do: unquote(value)
+      def abnf_rule!(unquote(name)), do: unquote(value)
     end
   end
 

@@ -43,7 +43,7 @@ defmodule ABNF.Grammar do
         case c_nl rest do
           nil ->
             module_name = Keyword.get opts, :target_module, String.to_atom(
-              "A#{Base.encode16 :crypto.hash(
+              "ABNF_#{Base.encode16 :crypto.hash(
                 :md5, :erlang.term_to_binary(make_ref())
               )}"
             )
@@ -53,7 +53,7 @@ defmodule ABNF.Grammar do
                 nil
               else
                 fun_name = String.to_atom(
-                  String.downcase("A#{Base.encode16 :crypto.hash(
+                  String.downcase("ABNF_#{Base.encode16 :crypto.hash(
                     :md5, :erlang.term_to_binary(make_ref())
                   )}"
                 ))
