@@ -47,7 +47,7 @@ defmodule ABNF do
         true ->
           raise ArgumentError, "Missing use option :grammar_file"
       end
-      {grammar, funs} = case Grammar.rulelist input, module: __MODULE__, create_module: false do
+      {grammar, funs} = case Grammar.rulelist input, target_module: __MODULE__, create_module: false do
         {grammar, '', funs} -> {grammar, funs}
         {_grammar, rest, _funs} -> throw {:incomplete_parsing, rest}
         _ -> throw {:invalid_grammar, input}
